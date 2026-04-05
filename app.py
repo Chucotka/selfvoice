@@ -4,17 +4,16 @@ import tempfile
 from cloner import VoiceCloner
 from processor import AudioProcessor
 
-st.set_page_config(page_title="SoulSurfer Voice Clone", layout="centered")
+st.set_page_config(page_title="SoulSurfer Voice Clone", layout="wide")
 
-# Initialize Model (Cached so it doesn't reload every click)
 @st.cache_resource
 def load_model():
     return VoiceCloner()
 
 cloner = load_model()
 
-st.title("🎙️ Professional Voice Cloning")
-st.markdown("Upload a sample and generate natural speech with emotional transfer.")
+st.title("🎙️ Профессиональное Клонирование Голоса")
+st.markdown("Загрузите образец (6-10 сек) и введите текст для синтеза.")
 
 # Function to cleanup temporary files
 def cleanup_files(*filepaths):
@@ -25,19 +24,27 @@ def cleanup_files(*filepaths):
             except Exception:
                 pass
 
-# Sidebar for Settings
+# Сайдбар с настройками
 with st.sidebar:
-    st.header("Audio Settings")
-    speed = st.slider("Speed (Tempo)", 0.5, 2.0, 1.0, 0.1)
-    pitch = st.slider("Pitch (Semitones)", -12, 12, 0, 1)
-    volume = st.slider("Volume Boost (dB)", -20, 20, 0, 1)
+    st.header("Настройки звука")
 
-    if st.button("Clear Session Data"):
+    # Выбор языка
+    lang_option = st.selectbox(
+        "Язык синтеза",
+        ("Russian (ru)", "English (en)", "German (de)", "Spanish (es)")
+    )
+    lang_code = lang_option.split("(")[1].replace(")", "")
+
+    speed = st.slider("Скорость (Tempo)", 0.5, 2.0, 1.0, 0.1)
+    pitch = st.slider("Тон (Pitch)", -12, 12, 0, 1)
+    volume = st.slider("Усиление (dB)", -20, 20, 0, 1)
+
+    if st.button("Очистить данные сессии"):
         st.session_state.clear()
-        st.success("Session cleared.")
+        st.success("Данные удалены.")
 
-# Main UI
-uploaded_file = st.file_uploader("Upload Reference Audio (.wav, .mp3, .flac)", type=["wav", "mp3", "flac"])
+# Основная область
+uploaded_file = st.file_uploader("Загрузите файл образца (.wav, .mp3, .flac)", type=["wav", "mp3", "flac"])
 
 if uploaded_file:
     # We do not save to disk immediately to avoid disk space leaks on every Streamlit re-run.
@@ -52,13 +59,17 @@ if uploaded_file:
     valid, msg = AudioProcessor.validate_reference(val_path)
     cleanup_files(val_path)
 
-    st.info(msg)
+    if not valid:
+        st.error(msg)
+    else:
+        st.success("Образец готов.")
 
-    text_input = st.text_area("Enter text to synthesize:", placeholder="Hello, I am your cloned voice...")
+    text_input = st.text_area("Введите текст на выбранном языке:",
+                             placeholder="Привет! Я твой клонированный голос. Как дела?")
 
-    if st.button("Generate & Process"):
+    if st.button("Сгенерировать голос"):
         if text_input and valid:
-            with st.spinner("Synthesizing..."):
+            with st.spinner("Синтезирую (это может занять время)..."):
                 # Use secure temporary files
                 tmp_ref = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
                 tmp_preprocessed = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
@@ -85,7 +96,7 @@ if uploaded_file:
                     AudioProcessor.preprocess_audio(ref_path, preprocessed_path)
 
                     # 1. Generate Voice using the preprocessed reference
-                    cloner.clone_and_generate(text_input, preprocessed_path, raw_output)
+                    cloner.clone_and_generate(text_input, preprocessed_path, raw_output, language=lang_code)
 
                     # 2. Apply Post-processing
                     AudioProcessor.apply_post_processing(
@@ -97,12 +108,14 @@ if uploaded_file:
                     with open(final_output, "rb") as f:
                         final_audio_bytes = f.read()
 
-                    st.success("Generation Complete!")
+                    st.success("Генерация завершена!")
                     st.audio(final_audio_bytes, format='audio/wav')
-                    st.download_button("Download Audio", final_audio_bytes, file_name="cloned_voice.wav")
+                    st.download_button("Скачать результат", final_audio_bytes, file_name="cloned_voice.wav")
 
+                except Exception as e:
+                    st.error(f"Ошибка при генерации: {e}")
                 finally:
                     # Privacy First: Always clean up files after generation
                     cleanup_files(ref_path, preprocessed_path, raw_output, final_output)
         else:
-            st.error("Please provide valid audio and text.")
+            st.warning("Пожалуйста, введите текст и проверьте аудио-образец.")

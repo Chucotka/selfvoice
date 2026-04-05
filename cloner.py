@@ -5,13 +5,14 @@ import os
 class VoiceCloner:
     def __init__(self):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"-> Loading TTS model to {self.device}...")
-        # Automatically downloads weights on first run
+        print(f"-> Loading XTTS-v2 to {self.device}...")
+        # Модель скачается автоматически при первом запуске (~2.5 ГБ)
         self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(self.device)
 
-    def clone_and_generate(self, text, speaker_wav, output_path, language="en"):
+    def clone_and_generate(self, text, speaker_wav, output_path, language="ru"):
         """
-        Generates speech using the reference speaker_wav.
+        Генерация речи.
+        Параметр language должен быть "ru" для русского или "en" для английского.
         """
         self.tts.tts_to_file(
             text=text,
