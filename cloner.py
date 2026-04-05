@@ -1,12 +1,23 @@
 import torch
 from TTS.api import TTS
 import os
+import platform
 
 class VoiceCloner:
     def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"-> Loading XTTS-v2 to {self.device}...")
-        # Модель скачается автоматически при первом запуске (~2.5 ГБ)
+        # Логика выбора устройства специально для Mac M1/M2/M3
+        if torch.backends.mps.is_available():
+            self.device = "mps"
+            print("-> Использую Apple Metal Performance Shaders (MPS)")
+        elif torch.cuda.is_available():
+            self.device = "cuda"
+            print("-> Использую NVIDIA CUDA")
+        else:
+            self.device = "cpu"
+            print("-> Внимание: GPU не найден, использую CPU (будет медленно)")
+
+        # Загрузка модели
+        # Для M1 Max лучше использовать XTTS-v2, она хорошо оптимизирована
         self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(self.device)
 
     def clone_and_generate(self, text, speaker_wav, output_path, language="ru"):

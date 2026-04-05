@@ -34,7 +34,7 @@ class AudioProcessor:
         # Load audio
         y, sr = librosa.load(input_path, sr=None)
 
-        # 1. Change Speed (Time Stretching)
+        # 1. Change Speed (Time Stretching without pitch shift)
         if speed != 1.0:
             y = librosa.effects.time_stretch(y, rate=speed)
 
@@ -45,7 +45,7 @@ class AudioProcessor:
         # Save temporary processed file
         sf.write(output_path, y, sr)
 
-        # 3. Change Volume using Pydub
+        # 3. Change Volume using Pydub (efficient and straightforward)
         if volume_db != 0:
             audio = AudioSegment.from_file(output_path)
             audio = audio + volume_db

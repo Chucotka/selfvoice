@@ -1,8 +1,9 @@
---extra-index-url https://download.pytorch.org/whl/cu118
-torch
+torch>=2.0.0
+torchaudio
 TTS==0.22.0
 streamlit
 pydub
 librosa
 numpy
 soundfile
+cython
